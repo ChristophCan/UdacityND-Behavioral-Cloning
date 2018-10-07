@@ -10,11 +10,6 @@ import cv2
 from os.path import split, join
 import numpy as np
 
-# Just disables the warning, doesn't enable AVX/FMA
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
-
 csvFile = open('./drivingData02/driving_log.csv')
 reader = csv.reader(csvFile)
 
@@ -23,17 +18,21 @@ measurements = []
 for line in reader:
     #Read ImagesData
     for i in range(3):
-        ImagePath, ImageName = split(line[i])
-                
-    centerImagePath, centerImageName = split(line[0])
-    image = cv2.imread(join('./drivingData02/IMG', centerImageName))
-    images.append(image)
-    images.append(cv2.flip(image,1))
+        ImagePath, ImageName = split(line[i])               
+        image = cv2.imread(join('./drivingData02/IMG', ImageName))
+        images.append(image)
+        images.append(cv2.flip(image,1))
     
-    #Read SteeringData
-    measurement = float(line[3])
-    measurements.append(measurement)
-    measurements.append(measurement * -1.0)
+        #Read SteeringData        
+        if i==0:
+            measurement = float(line[3])
+        elif i==1:
+            measurement = float(line[3]) + 0.4
+        elif i==2:
+            measurement = float(line[3]) - 0.4
+            
+        measurements.append(measurement)
+        measurements.append(measurement * -1.0)
     
 X_train = np.array(images)
 y_train = np.array(measurements)
@@ -44,36 +43,30 @@ from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, MaxPooling2
 
 clear_session()
 
+# Just disables the warning, doesn't enable AVX/FMA
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+#LeNet
 model = Sequential()
 model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=(160,320,3)))
-model.add(Cropping2D(cropping=((50,20), (0,0))))
-
-model.add(Conv2D(32, kernel_size=(3, 3),padding='valid'))
+model.add(Cropping2D(cropping=((70,25), (0,0))))
+model.add(Conv2D(6, kernel_size=(5, 5),padding='valid'))
 model.add(Activation('relu'))
-
 model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.5))
-#model.add(Activation('relu'))
-
-model.add(Conv2D(32, kernel_size=(3, 3),padding='valid'))
+model.add(Dropout(0.3))
+model.add(Conv2D(6, kernel_size=(5, 5),padding='valid'))
 model.add(Activation('relu'))
-
 model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.5))
-
+model.add(Dropout(0.3))
 model.add(Flatten())
-#model.add(Dense(128))
-#model.add(Activation('relu'))
 model.add(Dense(120))
-model.add(Activation('sigmoid'))
-
-model.add(Dense(60))
-model.add(Activation('sigmoid'))
-
+model.add(Dense(84))
 model.add(Dense(1))
 
+#NVIDIA
 
 model.compile(loss='mse', optimizer='adam')
-model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=3)
+model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=5)
 
 model.save('model.h5')
