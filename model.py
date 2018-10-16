@@ -9,54 +9,76 @@ import csv
 import cv2
 from os.path import split, join
 import numpy as np
+from sklearn.utils import shuffle
 
 drivingDataName = join('.', 'drivingData')
-drivingSubNames = ['Track01Center', 'Track01CenterReverse', 'Track02Center']
+drivingSubNames = ['Track01Center', 'Track01CenterReverse']
 
-images = []
-measurements = []
-
+#Read all lines of csv-Files
+samples = []
 for subFolder in drivingSubNames:
-    
-    print('Reading Folder ', subFolder)
-    
-    csvFile = open(join(drivingDataName, subFolder, 'driving_log.csv'))
-    reader = csv.reader(csvFile)
-
-    print('CSV-File ', join(drivingDataName, subFolder, 'driving_log.csv'))    
-    
-    for line in reader:
-        #Read ImagesData
-        for i in range(3):
-            ImagePath, ImageName = split(line[i])               
-            image = cv2.imread(join(drivingDataName, subFolder, 'IMG', ImageName))                        
+    with open(join(drivingDataName, subFolder, 'driving_log.csv')) as csvfile:
+        reader = csv.reader(csvfile)
+        for line in reader:
+            line.append(subFolder)
+            samples.append(line)
             
-            images.append(image)
-            images.append(cv2.flip(image,1))
-        
-            #Read SteeringData        
-            if i==0:
-                measurement = float(line[3])
-            elif i==1:
-                measurement = float(line[3]) + 0.4
-            elif i==2:
-                measurement = float(line[3]) - 0.4                          
-                
-            measurements.append(measurement)
-            measurements.append(measurement * -1.0)
+#Split the data in training and validation set
+from sklearn.model_selection import train_test_split
+train_samples, validation_samples = train_test_split(samples, test_size=0.2)
+
+
+def generator(samples, batch_size=32):
+    num_samples = len(samples)    
     
-X_train = np.array(images)
-y_train = np.array(measurements)
+    while 1:
+        shuffle(samples)            
+        
+        #Processing the batches with given batch_size
+        for offset in range(0, num_samples, batch_size):
+            batch_samples = samples[offset:offset+batch_size]         
+                        
+            images = []
+            measurements = []
+            
+            #Iterating through all training pictures
+            for batch_sample in batch_samples:
+                
+                #Iterating through center, left and right image
+                for i in range(3):
+                    ImagePath, ImageName = split(batch_sample[i])               
+                    image = cv2.imread(join(drivingDataName, batch_sample[7], 'IMG', ImageName))                                       
+                                
+                    #Adding image and flipped image
+                    images.append(image)
+                    images.append(cv2.flip(image,1))
+        
+                    #Read SteeringData for center, left and right image     
+                    if i==0:
+                        measurement = float(batch_sample[3])
+                    elif i==1:
+                        measurement = float(batch_sample[3]) + 0.3
+                    elif i==2:
+                        measurement = float(batch_sample[3]) - 0.3                          
+                
+                    #Adding Steering data and flipped data
+                    measurements.append(measurement)
+                    measurements.append(measurement * -1.0)
+                    
+            X_train = np.array(images)
+            y_train = np.array(measurements)                        
+            yield shuffle(X_train,y_train)
 
 from keras.backend import clear_session
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, MaxPooling2D, Dropout, Cropping2D
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D
 
+# Clearing data from possible former training runs, implemented this because my GPU calculation was a little buggy
 clear_session()
 
-# Just disables the warning, doesn't enable AVX/FMA
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+# compile and train the model using the generator function
+train_generator = generator(train_samples, batch_size=32)
+validation_generator = generator(validation_samples, batch_size=32)
 
 #LeNet
 """
@@ -79,7 +101,7 @@ model.add(Dense(1))
 
 #NVIDIA
 model = Sequential()
-model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=(160,320,3)))
+model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=(160,320,3), output_shape=(160,320,3)))
 model.add(Cropping2D(cropping=((70,25), (0,0))))
 model.add(Conv2D(24,(5,5),strides = (2,2),activation='relu'))
 model.add(Conv2D(36,(5,5),strides = (2,2),activation='relu'))
@@ -93,6 +115,6 @@ model.add(Dense(10))
 model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
-model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=2)
+model.fit_generator(train_generator, steps_per_epoch= len(train_samples),validation_data=validation_generator,validation_steps=len(validation_samples),epochs=2, verbose = 1)
 
 model.save('model.h5')
