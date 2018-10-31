@@ -12,7 +12,7 @@ import numpy as np
 from sklearn.utils import shuffle
 
 drivingDataName = join('.', 'drivingData')
-drivingSubNames = ['Track01Center', 'Track01CenterReverse']
+drivingSubNames = ['Track01Center', 'Track01CenterReverse', 'Track01BridgeBackToMiddle', 'Track01RedWhiteCurveBackToMiddle', 'Track01SideToCenter', 'Track01RedCurveTraining']
 
 #Read all lines of csv-Files
 samples = []
@@ -57,9 +57,9 @@ def generator(samples, batch_size=32):
                     if i==0:
                         measurement = float(batch_sample[3])
                     elif i==1:
-                        measurement = float(batch_sample[3]) + 0.3
+                        measurement = float(batch_sample[3]) + 0.25
                     elif i==2:
-                        measurement = float(batch_sample[3]) - 0.3                          
+                        measurement = float(batch_sample[3]) - 0.25                         
                 
                     #Adding Steering data and flipped data
                     measurements.append(measurement)
@@ -71,7 +71,7 @@ def generator(samples, batch_size=32):
 
 from keras.backend import clear_session
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D, Dropout, MaxPooling2D, Activation
 
 # Clearing data from possible former training runs, implemented this because my GPU calculation was a little buggy
 clear_session()
@@ -108,6 +108,10 @@ model.add(Conv2D(36,(5,5),strides = (2,2),activation='relu'))
 model.add(Conv2D(48,(5,5),strides = (2,2),activation='relu'))
 model.add(Conv2D(64,(3,3),strides = (1,1),activation='relu'))
 model.add(Conv2D(64,(3,3),strides = (1,1),activation='relu'))
+
+#model.add(MaxPooling2D((2, 2)))
+model.add(Dropout(0.3))
+
 model.add(Flatten())
 model.add(Dense(100))
 model.add(Dense(50))
@@ -115,6 +119,6 @@ model.add(Dense(10))
 model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
-model.fit_generator(train_generator, steps_per_epoch= len(train_samples),validation_data=validation_generator,validation_steps=len(validation_samples),epochs=2, verbose = 1)
+model.fit_generator(train_generator, steps_per_epoch= len(train_samples),validation_data=validation_generator,validation_steps=len(validation_samples),epochs=3, verbose = 1, workers=10, max_queue_size=300)
 
 model.save('model.h5')
