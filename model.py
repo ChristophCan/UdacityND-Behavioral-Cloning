@@ -77,8 +77,8 @@ from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D, Dropout, Ma
 clear_session()
 
 # compile and train the model using the generator function
-train_generator = generator(train_samples, batch_size=32)
-validation_generator = generator(validation_samples, batch_size=32)
+train_generator = generator(train_samples, batch_size=16)
+validation_generator = generator(validation_samples, batch_size=16)
 
 #LeNet
 """
