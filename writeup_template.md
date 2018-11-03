@@ -35,9 +35,9 @@ The model.py file contains the code for training and saving the convolution neur
 
 #### 1. An appropriate model architecture has been employed
 
-I used the model, described as the apporach from NVIDIA as my architecture.
+I used the model, described as the approach from NVIDIA as my architecture.
 
-This model consists of 5 convolution neural networks. Three with 5x5 filter sizes, followed by two 3x3 filter sizes. As an activation function for each, I chose a RELU function (model.py lines 104-108).
+This model consists of 5 convolution neural networks. Three with 5x5 filter sizes, followed by a MaxPooling and a Dropout Layer. The next two layers are a convolutional 2x2 and a 1x1. As an activation function for each, I chose a RELU function (model.py lines 104-108).
 
 These CNN layers are then flattened and the data is fed into 4 consecutive, fully connected layers with diminishing amounts of nodes (model.py lines 109-113).
 
@@ -46,6 +46,8 @@ Before the data runs through the above described layers, it is normalized and cr
 #### 2. Attempts to reduce overfitting in the model
 
 My main approach to reduce overfitting was to limit the number of epochs. I only used two epochs and already got a very good result with the car following the track without leaving it at any time.
+
+Also the MaxPooling and Dropout Layer, with a pretty low "keep-probability" of 0.3 helped reducing overfitting.
 
 The data got split into a training and a validation set (model.py lines 28 - 29) and it is shuffled twice. Once at the very beginning, before being processed in batches and then again, during evaluating every single batch.
 
@@ -57,11 +59,11 @@ The model used an adam optimizer, so the learning rate was not tuned manually (m
 
 #### 4. Appropriate training data
 
-As training data I really only used two approaches. One was keeping the car in the center of the lane for two laps and the other one was doing the same for driving the track in reverse direction.
+As training data I used keeping the car n the center of the lane for two laps and doing the same for driving the track in reverse direction. I specially trained the Bridge to correct the behavior, when the car is too far to the sides. I also generally trained what to do, if the car is too far to the side of the track. The curves, with the red and white border also got specially trained.
 
-As suggested in the project videos, I then not only used the center image, but also the left and right one, to train the car what to do if it gets too far to the right or left. I used a correction value of 0.3, which seemed to be exactly the right amount of correction.
+As suggested in the project videos, I then not only used the center image, but also the left and right one, to train the car what to do if it gets too far to the right or left. I used a correction value of 0.25, which seemed to be exactly the right amount of correction.
 
-This approach has the disadvantage, that the car seems to slightly wobble left and right during the whole drive. I have to be careful, that this wobbling doesn´t get to big, as it can result in the car leaving the track. A higher value than 0.3 does exactly that, but a lower value makes the car leave the track especially in the sharp curves.
+The many special trainings might be risky, as there is the risk of overfitting the model. I had to keep a close eye on the resulting training and validation accuracies.
 
 ##### 5. Using a Generator
 
@@ -71,6 +73,6 @@ This unfortunately limited my time for experimenting with more training data or 
 
 ### Summary
 
-With a surprisingly low amount of training data, I managed to train a model which keeps the car on track. Using left and right images to train a slight course correction, when the car leaves the center of the road, hereby seemed to be the major factor in my creation of training data.
+I managed to train a model which keeps the car on track. Using left and right images to train a slight course correction, when the car leaves the center of the road, hereby seemed to be the major factor in my creation of training data.
 
-I also tried to add more training data, as suggested in the project videos like driving the car back to the center of the road when it is on the border. But this only resulted in a worse driving performance. That´s why I stuck to my simple training data.
+I also tried to add more training data, as suggested in the project videos like driving the car back to the center of the road when it is on the border. This helped to keep the car on track on the special features of the track as the bridge or the sharp curves. 

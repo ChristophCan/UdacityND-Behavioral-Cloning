@@ -12,7 +12,7 @@ import numpy as np
 from sklearn.utils import shuffle
 
 drivingDataName = join('.', 'drivingData')
-drivingSubNames = ['Track01Center', 'Track01CenterReverse', 'Track01BridgeBackToMiddle', 'Track01RedWhiteCurveBackToMiddle', 'Track01SideToCenter', 'Track01RedCurveTraining']
+drivingSubNames = ['Track01Center', 'Track01CenterReverse', 'Track01BridgeBackToMiddle', 'Track01RedWhiteCurveBackToMiddle', 'Track01SideToCenter', 'Track01RedCurveTraining', 'Track01CurveAfterBridge']
 
 #Read all lines of csv-Files
 samples = []
@@ -108,13 +108,11 @@ model.add(Conv2D(36,(5,5),strides = (2,2),activation='relu'))
 model.add(Conv2D(48,(5,5),strides = (2,2)))
 
 model.add(MaxPooling2D((2, 2)))
-model.add(Dropout(0.5))
+model.add(Dropout(0.3))
 model.add(Activation('relu'))
 
 model.add(Conv2D(64,(2,2),strides = (1,1),activation='relu'))
 model.add(Conv2D(64,(1,1),strides = (1,1),activation='relu'))
-
-
 
 model.add(Flatten())
 model.add(Dense(100))
@@ -123,6 +121,6 @@ model.add(Dense(10))
 model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
-model.fit_generator(train_generator, steps_per_epoch= len(train_samples),validation_data=validation_generator,validation_steps=len(validation_samples),epochs=3, verbose = 1, workers=10, max_queue_size=300)
+model.fit_generator(train_generator, steps_per_epoch= len(train_samples),validation_data=validation_generator,validation_steps=len(validation_samples),epochs=2, verbose = 1, workers=10, max_queue_size=300)
 
 model.save('model.h5')
